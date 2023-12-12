@@ -3,11 +3,9 @@ program zk_voting.aleo {
 
     mapping poll_expiration: field => u32;
 
-    mapping poll_exists: field => bool;
-
     mapping tickets: field => u64;
 
-    mapping votes: field => [u32; 10];
+    mapping votes: field => u64;
 
     mapping has_ticket: field => bool;
 
@@ -20,7 +18,6 @@ program zk_voting.aleo {
     record Ticket {
         owner: address,
         poll_id: field,
-        proposal_id: u8,
     }
 
     struct PollInfo {
@@ -48,24 +45,20 @@ program zk_voting.aleo {
     }
     finalize create_poll(public poll_id: field, public poll_info: PollInfo) {
         assert(poll_info.proposal_count >= 2u8 && poll_info.proposal_count <= 10u8);
-        let poll_created: bool = Mapping::get_or_use(poll_exists, poll_id, false);
+        let poll_created: bool = Mapping::contains(polls, poll_id);
         assert(!poll_created);
         Mapping::set(poll_expiration, poll_id, block.height + poll_info.duration);
-        Mapping::set(poll_exists, poll_id, true);
         Mapping::set(polls, poll_id, poll_info);
         Mapping::set(tickets, poll_id, 0u64);
-        Mapping::set(votes, poll_id, [0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32]);
     }
 
     transition create_ticket(
         public poll_id: field,
         voter: address,
-        proposal_id: u8,
     ) -> Ticket {
         let new: Ticket = Ticket {
                     owner: voter,
                     poll_id,
-                    proposal_id,
         };
 
         let voter_id: field = BHP256::hash_to_field(new);
@@ -82,16 +75,16 @@ program zk_voting.aleo {
         Mapping::set(tickets, poll_id, current + 1u64);
     }
 
-    transition vote(ticket: Ticket) {
-        return then finalize(ticket.poll_id, ticket.proposal_id);
+    transition vote(ticket: Ticket, public proposal_id: u8) {
+        return then finalize(ticket.poll_id, proposal_id);
     }
     finalize vote(public poll_id: field, public proposal_id: u8) {
         let poll: PollInfo = Mapping::get(polls, poll_id);
         assert(proposal_id + 1u8 <= poll.proposal_count);
         let expiration: u32 = Mapping::get(poll_expiration, poll_id);
         assert(expiration > block.height);
-        let vote_counts: [u32; 10] = Mapping::get(votes, poll_id);
-        vote_counts[proposal_id].add(1u32);
-        Mapping::set(votes, poll_id, vote_counts);
+        let voting_slot: field = BHP256::hash_to_field(poll_id + proposal_id as field);
+        let slot_votes_count: u64 = Mapping::get_or_use(votes, voting_slot, 0u64);
+        Mapping::set(votes, voting_slot, slot_votes_count + 1u64);
     }
 }
