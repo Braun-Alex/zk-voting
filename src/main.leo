@@ -21,9 +21,9 @@ program zk_voting.aleo {
     }
 
     struct PollInfo {
-        title: [u16; 32],
-        question: [u16; 32],
-        proposals: [[u16; 20]; 10],
+        title: [u16; 3],
+        question: [u16; 3],
+        proposals: [[u16; 3]; 3],
         proposal_count: u8,
         proposer: address,
         duration: u32,
@@ -54,7 +54,7 @@ program zk_voting.aleo {
 
     transition create_ticket(
         public poll_id: field,
-        voter: address,
+        public voter: address,
     ) -> Ticket {
         let new: Ticket = Ticket {
                     owner: voter,
