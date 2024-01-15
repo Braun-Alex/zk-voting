@@ -1,0 +1,64 @@
+header {
+    position: fixed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    top: 0;
+    background-color: #D8CFB9;
+    height: 64px;
+    width: 100%;
+    right: inherit;
+}
+
+.header-container {
+    display: flex;
+    width: 90%;
+    justify-content: space-between;
+}
+
+.header-left a {
+    color: #241D11;
+    text-decoration: none;
+    margin-right: 20px;
+    font-size: 17px;
+}
+
+.nickname-header {
+    color: rgba(36, 29, 17, 0.65);
+    font-size: 18px;
+    font-weight: 500;
+    margin-right: 15px;
+    text-decoration: none;
+}
+
+.logout-button,
+.login-button {
+    background-color: #D8CFB9;
+    color: #F2F1ED;
+    border: 2px solid #F2F1ED;
+    letter-spacing: 1px;
+    padding: 5px 15px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 16px;
+    text-decoration: none;
+}
+
+.signup-button {
+    background-color: #F2F1ED;
+    color: #645A4C;
+    letter-spacing: 1px;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 50px;
+    margin-left: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    text-decoration: none;
+}
+
+@media (max-width: 700px) {
+    .header-left {
+      display: none;
+    }
+}

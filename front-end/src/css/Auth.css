@@ -1,0 +1,88 @@
+.form-header {
+   color: rgba(36, 29, 17, 0.79);
+   text-align: center;
+   font-size: 24px;
+   font-style: normal;
+   font-weight: 400;
+   line-height: 16px;
+   margin-top: 120px;
+   margin-bottom: 27px;
+}
+
+.form {
+  text-align: center;
+  margin: auto;
+  width: 600px;
+  padding: 40px 0;
+  border-radius: 10px;
+  background: #F2F1ED;
+  flex-shrink: 0;
+  border: 1px solid #c4ac9e;
+}
+
+.login-form,
+.registration-form {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    width: 100%;
+}
+
+.form-field {
+  justify-content: center;
+  margin-bottom: 35px;
+  padding: 8px 0 0 15px;
+  text-align: left;
+  height: 56px;
+  width: 85%;
+  border-radius: 4px;
+  border: 1px solid #FFEAC1;
+  background: #FFFBF4;
+}
+
+.form-field label {
+  display: block;
+  height: 16px;
+  width: 90%;
+  color: #9D99AC;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.form-field input {
+  width: 95%;
+  margin-top: 7px;
+  outline: none;
+  display: flex;
+  background: #FFFBF4;
+  border: none;
+  align-items: flex-start;
+  font-size: 14px;
+  gap: 8px;
+}
+
+.button-login,
+.button-reg {
+  background-color: #F2F1ED;
+  border: 2px solid rgb(171, 140, 99);
+  color: #645A4C;
+  letter-spacing: 1px;
+  padding: 10px 0;
+  margin: 10px;
+  width: 80%;
+  border-radius: 50px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+@media (max-width: 700px) {
+  .form-header {
+    margin-top: 120px;
+  }
+
+  .form {
+    margin-top: 30px;
+    padding: 30px 12px;
+    width: 80vw;
+  }
+}

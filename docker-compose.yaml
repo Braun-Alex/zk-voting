@@ -1,0 +1,95 @@
+services:
+  frontend:
+    build: ./front-end
+    image: frontend:latest
+    volumes:
+      - ./front-end:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - WDS_SOCKET_HOST=127.0.0.1
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - FAST_REFRESH=false
+      - WDS_SOCKET_PORT=3000
+    container_name: frontend-container
+    command: npm start
+    depends_on:
+      - backend
+    networks:
+      - account-network
+
+  backend:
+    build: ./back-end/account
+    image: backend:latest
+    container_name: backend-container
+    command: /usr/local/bin/db-check.sh account-db 5432 uvicorn main:app --reload --host 0.0.0.0 --port 8000 --log-config=logger_conf.yaml
+    volumes:
+      - ./back-end/account/:/app/
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - DATABASE_URI=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@account-db/${POSTGRES_DB}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - AES_SECRET_KEY=${AES_SECRET_KEY}
+    depends_on:
+      - account-db
+    networks:
+      - account-network
+
+
+  account-db:
+    image: postgres:16.0-alpine3.17
+    container_name: account-db-container
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - account-db-data:/var/lib/postgresql/data
+    networks:
+      - account-network
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx_config.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+    networks:
+      - account-network
+
+  snarkos-network:
+    build: ./aleo
+    image: snarkos-network
+    logging:
+      driver: none
+    container_name: snarkos-network-container
+    ports:
+      - "4133:4133"
+      - "3033:3033"
+    volumes:
+      - .:/aleo/data
+      - .:/root/.aleo/resources
+    stdin_open: true
+    tty: true
+    networks:
+      - account-network
+
+volumes:
+  account-db-data: {}
+
+networks:
+  account-network:
+    driver: bridge
+
