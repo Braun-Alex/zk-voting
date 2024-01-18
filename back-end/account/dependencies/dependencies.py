@@ -7,15 +7,9 @@ from jose import jwt
 from pydantic import ValidationError
 
 LOGIN_URL = "/login"
-REFRESH_URL = "/refresh"
 
-login_reusable_oauth = OAuth2PasswordBearer(
+reusable_oauth = OAuth2PasswordBearer(
     tokenUrl=LOGIN_URL,
-    scheme_name="JWT"
-)
-
-refresh_reusable_oauth = OAuth2PasswordBearer(
-    tokenUrl=REFRESH_URL,
     scheme_name="JWT"
 )
 
@@ -41,11 +35,11 @@ def validate_token(token: str) -> TokenPayload:
     return token_data
 
 
-def get_current_account(token: str = Depends(login_reusable_oauth)) -> TokenPayload:
+def get_current_account(token: str = Depends(reusable_oauth)) -> TokenPayload:
     return validate_token(token)
 
 
-def refresh_access_token(refresh_token: str = Depends(refresh_reusable_oauth)) -> TokenSchema:
+def refresh_access_token(refresh_token: str = Depends(reusable_oauth)) -> TokenSchema:
     token_data = validate_token(refresh_token)
 
     return TokenSchema(

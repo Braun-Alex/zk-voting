@@ -50,7 +50,7 @@ class AccountController(AccountControllerInterface):
         return accounts
 
     def add_poll(self, account_db: AccountDB, poll: str):
-        account_db.polls.append(poll)
+        account_db.polls = account_db.polls + [poll]
 
         self._db.commit()
         self._db.refresh(account_db)

@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }) => {
                 if (success) {
                     try {
                         const response = await axios.get(apiUrl);
-                        return response.data;
+                        return JSON.parse(response.data);
                     } catch (error) {
                         return null;
                     }
@@ -176,7 +176,7 @@ export const AuthProvider = ({ children }) => {
         const networkClient = new AleoNetworkClient(ALEO_NODE_REST_API);
         if (pollIDs) {
             for (const pollID of pollIDs) {
-                const poll = networkClient.getMapping("zk_voting.aleo", pollID);
+                const poll = networkClient.getProgramMappingValue("zk_voting.aleo", "polls", pollID);
                 polls.push({
                     id: pollID,
                     title: poll.title,
@@ -262,7 +262,7 @@ export const AuthProvider = ({ children }) => {
     }, [isAuthenticated]);
 
     return (
-        <AuthContext.Provider value={{ BACKEND_REST_API, ALEO_NODE_REST_API, isAuthenticated, account, accountPolls, worker, saveTokens, getAccountData, tryLoginAccount, logout, postMessagePromise }}>
+        <AuthContext.Provider value={{ BACKEND_REST_API, ALEO_NODE_REST_API, isAuthenticated, account, accountPolls, worker, saveTokens, tryRefreshAccessToken, getAccountData, tryLoginAccount, logout, postMessagePromise }}>
             {children}
         </AuthContext.Provider>
     );

@@ -5,6 +5,7 @@ from database import Base, engine, SessionLocal
 from service.account_service import AccountService
 from controllers.account_controller import AccountController
 from models.account_local_model import AccountLocal
+from models.poll_local_model import PollLocal
 from fastapi import FastAPI, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from dependencies.dependencies import get_current_account, refresh_access_token
@@ -42,10 +43,10 @@ def authorize_account(account: OAuth2PasswordRequestForm = Depends()):
 
 
 @app.post("/add_poll")
-def add_poll(poll: str, token_payload=Depends(get_current_account)):
+def add_poll(poll: PollLocal, token_payload=Depends(get_current_account)):
     account_nickname = token_payload.sub
-    logger.info(f"Adding poll {poll} to account with nickname {account_nickname}")
-    return account_service.add_poll_to_account(nickname=account_nickname, poll=poll)
+    logger.info(f"Adding poll {poll.poll_id} to account with nickname {account_nickname}")
+    return account_service.add_poll_to_account(nickname=account_nickname, poll=poll.poll_id)
 
 
 @app.get('/profile', response_model=str)

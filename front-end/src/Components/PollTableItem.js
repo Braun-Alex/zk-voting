@@ -305,12 +305,11 @@ class PollTableItem extends Component {
         return (
             <div className='poll-item-container'>
                 <div className='poll-item'>
-                    <div>{poll.title}</div>
+                    <div><strong>{poll.title}</strong></div>
                     <div>
                         <img src={pollImage} alt={'[]'} className="poll-photo" />
                     </div>
                     <div className="grup-poll-info">
-                        <p><strong>Title:</strong> "{poll.title}"</p>
                         <p><strong>Question:</strong> "{poll.question}"</p>
                         <p><strong>Count of proposals:</strong> {poll.proposal_count} proposals</p>
                         <p><strong>Proposals:</strong> ["{poll.proposals.join("\"; \"")}"]</p>

@@ -67,4 +67,3 @@ class AccountService(AccountServiceInterface):
             raise HTTPException(status.HTTP_404_NOT_FOUND)
 
         self._account_controller.add_poll(account_db, poll)
-

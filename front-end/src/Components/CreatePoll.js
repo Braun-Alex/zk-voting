@@ -92,7 +92,7 @@ class CreatePoll extends Component {
 
     createPoll = async () => {
         const { title, question, proposals, proposal_count, duration } = this.state.pollData;
-        const { BACKEND_REST_API, account, getAccountData, worker, postMessagePromise } = this.context;
+        const { BACKEND_REST_API, account, tryRefreshAccessToken, getAccountData, worker, postMessagePromise } = this.context;
         try {
             const REGEX = /^[A-Za-z0-9]*$/;
             const QUESTION_REGEX = /^[A-Za-z0-9?]*$/;
@@ -224,10 +224,10 @@ class CreatePoll extends Component {
                     }).then(async (workerResponse) => {
                         const pollID = (workerResponse.outputs)[0];
                         const ADD_POLL_API_URL = `${BACKEND_REST_API}/add_poll`;
-                        const formData = new URLSearchParams();
-                        formData.append('poll', pollID);
                         try {
-                            await axios.post(ADD_POLL_API_URL, formData);
+                            await axios.post(ADD_POLL_API_URL, {
+                                poll_id: pollID
+                            });
                             await Swal.fire({
                                 title: 'Success!',
                                 text: 'Poll has been successfully created!',
@@ -236,7 +236,20 @@ class CreatePoll extends Component {
                             });
                         } catch (error) {
                             if (error.response) {
-                                toast.error("Server denied access");
+                                const successfullyRefreshed = await tryRefreshAccessToken();
+                                if (successfullyRefreshed) {
+                                    await axios.post(ADD_POLL_API_URL, {
+                                        poll: pollID
+                                    });
+                                    await Swal.fire({
+                                        title: 'Success!',
+                                        text: 'Poll has been successfully created!',
+                                        icon: 'success',
+                                        confirmButtonText: 'Close'
+                                    });
+                                } else {
+                                    toast.error("Server denied access");
+                                }
                             } else if (error.request) {
                                 toast.error("Server does not respond");
                             } else {

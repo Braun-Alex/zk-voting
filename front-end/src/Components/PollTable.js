@@ -6,6 +6,19 @@ import PollTableItem from './PollTableItem';
 import '../css/PollMain.css';
 import { toast } from 'react-toastify';
 
+function bytesToCharArray(bytes) {
+    return bytes.map(byte => String.fromCharCode(byte)).join('').split('\u0000')[0];
+}
+
+function parsePoll(serializedPollData) {
+    let pollData = serializedPollData.replace(/(\w+):/g, '"$1":').replace(/u8/g, '').replace(/(aleo[a-z0-9]*),/g, '"$1",').replace(/u32/g, '');
+    pollData = JSON.parse(pollData);
+    pollData.title = bytesToCharArray(pollData.title);
+    pollData.question = bytesToCharArray(pollData.question);
+    pollData.proposals = pollData.proposals.map(proposal => bytesToCharArray(proposal)).filter(proposal => proposal !== '');
+    return pollData;
+}
+
 const PollTable = () => {
     const [polls, setPolls] = useState([]);
     const { BACKEND_REST_API, ALEO_NODE_REST_API } = useContext(AuthContext);
@@ -17,8 +30,8 @@ const PollTable = () => {
                 let allPolls = [];
                 const networkClient = new AleoNetworkClient(ALEO_NODE_REST_API);
                 for (const pollID of pollIDs.data) {
-                    const poll = networkClient.getMapping("zk_voting.aleo", pollID);
-                    allPolls.push(poll);
+                    const poll = await networkClient.getProgramMappingValue("zk_voting.aleo", "polls", pollID);
+                    allPolls.push(parsePoll(poll));
                 }
                 if (allPolls.length !== 0) {
                     setPolls(allPolls);
@@ -29,13 +42,13 @@ const PollTable = () => {
                 } else if (error.request) {
                     toast.error("Server does not respond");
                 } else {
-                    toast.error("Something went wrong: " + error.message);
+                    toast.error("Something went wrong: " + error);
                 }
             }
         };
 
         fetchPolls();
-    });
+    }, []);
 
     if (polls.length !== 0) {
         return (
