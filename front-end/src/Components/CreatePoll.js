@@ -1,11 +1,5 @@
 import React, { Component } from 'react';
-import {
-    Account,
-    AleoNetworkClient,
-    NetworkRecordProvider,
-    ProgramManager,
-    AleoKeyProvider
-} from '@aleohq/sdk';
+import { Account } from '@aleohq/sdk';
 import '../css/Modal.css'
 import Modal from 'react-modal';
 import Dropdown from 'react-dropdown';
@@ -32,26 +26,30 @@ function hasDuplicates(array) {
     return array.length !== set.size;
 }
 
-const ID_HASHING_PROGRAM = "program id_hashing.aleo {\n" +
-    "    struct PollInfo {\n" +
-    "        title: [u8; 32],\n" +
-    "        question: [u8; 32],\n" +
-    "        proposals: [[u8; 32]; 32],\n" +
-    "        proposal_count: u8,\n" +
-    "        proposer: address,\n" +
-    "        duration: u32,\n" +
-    "    }\n" +
+const ID_HASHING_PROGRAM = "program id_hashing.aleo;\n" +
     "\n" +
-    "    transition to_poll_id(public info: PollInfo) -> field {\n" +
-    "        let poll_id: field = Poseidon8::hash_to_field(info);\n" +
-    "        return poll_id;\n" +
-    "    }\n" +
+    "struct PollInfo:\n" +
+    "    title as [u8; 32u32];\n" +
+    "    question as [u8; 32u32];\n" +
+    "    proposals as [[u8; 32u32]; 32u32];\n" +
+    "    proposal_count as u8;\n" +
+    "    proposer as address;\n" +
+    "    duration as u32;\n" +
     "\n" +
-    "    transition to_voting_slot(public poll_id: field, public proposal_id: u8) -> field {\n" +
-    "        let voting_slot: field = Poseidon8::hash_to_field(poll_id + proposal_id as field);\n" +
-    "        return voting_slot;\n" +
-    "    }\n" +
-    "}";
+    "\n" +
+    "function to_poll_id:\n" +
+    "    input r0 as PollInfo.public;\n" +
+    "    hash.psd8 r0 into r1 as field;\n" +
+    "    output r1 as field.private;\n" +
+    "\n" +
+    "\n" +
+    "function to_voting_slot:\n" +
+    "    input r0 as field.public;\n" +
+    "    input r1 as u8.public;\n" +
+    "    cast r1 into r2 as field;\n" +
+    "    add r0 r2 into r3;\n" +
+    "    hash.psd8 r3 into r4 as field;\n" +
+    "    output r4 as field.private;";
 
 class CreatePoll extends Component {
     static contextType = AuthContext;
@@ -94,7 +92,7 @@ class CreatePoll extends Component {
 
     createPoll = async () => {
         const { title, question, proposals, proposal_count, duration } = this.state.pollData;
-        const { BACKEND_REST_API, ALEO_NODE_REST_API, account, getAccountData } = this.context;
+        const { BACKEND_REST_API, account, getAccountData, worker, postMessagePromise } = this.context;
         try {
             const REGEX = /^[A-Za-z0-9]*$/;
             const QUESTION_REGEX = /^[A-Za-z0-9?]*$/;
@@ -151,9 +149,6 @@ class CreatePoll extends Component {
                 return;
             }
 
-            const keyProvider = new AleoKeyProvider();
-            keyProvider.useCache(true);
-
             let privateKey;
             if (account.privateKey === '<encrypted>') {
                 const response = await getAccountData(true);
@@ -201,13 +196,6 @@ class CreatePoll extends Component {
                 "duration: " + DURATION +
                 "}";
 
-            const networkClient = new AleoNetworkClient(ALEO_NODE_REST_API);
-            const recordProvider = new NetworkRecordProvider(aleoAccount, networkClient);
-
-            const programManager = new ProgramManager(ALEO_NODE_REST_API, keyProvider, recordProvider);
-            programManager.setAccount(aleoAccount);
-            const keySearchParams = { "cacheKey": `zk_voting:${CREATING_POLL_FUNCTION_NAME}` };
-
             Swal.fire({
                 title: 'Creating the poll...',
                 html: 'Please wait while your poll is being created on the Aleo network...',
@@ -219,24 +207,25 @@ class CreatePoll extends Component {
             });
 
             try {
-                await programManager.execute(
-                    ZK_VOTING_PROGRAM_NAME,
-                    CREATING_POLL_FUNCTION_NAME,
-                    PUBLIC_FEE,
-                    false,
-                    [POLL],
-                    undefined,
-                    keySearchParams
-                ).then(async () => {
-                    await programManager.run(
-                        ID_HASHING_PROGRAM,
-                        POLL_ID_FUNCTION_NAME,
-                        [POLL],
-                        false).then(async (executionResponse) => {
-                        const pollID = executionResponse.getOutputs();
+                await postMessagePromise(worker, {
+                    type: "ALEO_EXECUTE_PROGRAM_ON_CHAIN",
+                    programName: ZK_VOTING_PROGRAM_NAME,
+                    functionName: CREATING_POLL_FUNCTION_NAME,
+                    publicFee: PUBLIC_FEE,
+                    inputs: [POLL],
+                    privateKey: privateKey
+                }).then(async () => {
+                    await postMessagePromise(worker, {
+                        type: "ALEO_EXECUTE_PROGRAM_OFF_CHAIN",
+                        program: ID_HASHING_PROGRAM,
+                        functionName: POLL_ID_FUNCTION_NAME,
+                        inputs: [POLL],
+                        privateKey: privateKey
+                    }).then(async (workerResponse) => {
+                        const pollID = (workerResponse.outputs)[0];
                         const ADD_POLL_API_URL = `${BACKEND_REST_API}/add_poll`;
                         const formData = new URLSearchParams();
-                        formData.append('poll', pollID[0]);
+                        formData.append('poll', pollID);
                         try {
                             await axios.post(ADD_POLL_API_URL, formData);
                             await Swal.fire({

@@ -10,6 +10,8 @@ const initialState = {
     isAuthenticated: false,
     account: null,
     accountPolls: null,
+    worker: null,
+    workerReady: false,
     setAuthHeader: () => {},
     saveTokens: () => {},
     getData: () => {},
@@ -17,7 +19,10 @@ const initialState = {
     getAccountData: () => {},
     getAccountPolls: () => {},
     tryLoginAccount: () => {},
-    logout: () => {}
+    logout: () => {},
+    setWorker: () => {},
+    setWorkerReady: () => {},
+    postMessagePromise: () => {}
 };
 
 export const AuthContext = createContext(initialState);
@@ -26,6 +31,9 @@ export const AuthProvider = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [account, setAccount] = useState(null);
     const [accountPolls, setAccountPolls] = useState(null);
+
+    const [worker, setWorker] = useState(null);
+    const [workerReady, setWorkerReady] = useState(false);
 
     const BACKEND_REST_API = 'http://localhost:8080';
     const ALEO_NODE_REST_API = 'http://localhost:3033';
@@ -166,20 +174,22 @@ export const AuthProvider = ({ children }) => {
     const getAccountPolls = async (pollIDs) => {
         const polls = [];
         const networkClient = new AleoNetworkClient(ALEO_NODE_REST_API);
-        for (const pollID of pollIDs) {
-            const poll = networkClient.getMapping("zk_voting.aleo", pollID);
-            polls.push({
-                id: pollID,
-                title: poll.title,
-                question: poll.question,
-                proposal_count: poll.proposal_count,
-                proposals: poll.proposals,
-                proposer: poll.proposer,
-                duration: poll.duration
-            });
-        }
-        if (polls.length !== 0) {
-            return polls;
+        if (pollIDs) {
+            for (const pollID of pollIDs) {
+                const poll = networkClient.getMapping("zk_voting.aleo", pollID);
+                polls.push({
+                    id: pollID,
+                    title: poll.title,
+                    question: poll.question,
+                    proposal_count: poll.proposal_count,
+                    proposals: poll.proposals,
+                    proposer: poll.proposer,
+                    duration: poll.duration
+                });
+            }
+            if (polls.length !== 0) {
+                return polls;
+            }
         }
         return null;
     }
@@ -208,6 +218,18 @@ export const AuthProvider = ({ children }) => {
         toast.info("You have been logged out!");
     }
 
+    function postMessagePromise(worker, message) {
+        return new Promise((resolve, reject) => {
+            worker.onmessage = (event) => {
+                resolve(event.data);
+            };
+            worker.onerror = (error) => {
+                reject(error);
+            };
+            worker.postMessage(message);
+        });
+    }
+
     useEffect(() => {
         const getAuthState = async () => {
             const access_token = localStorage.getItem('access_token');
@@ -222,8 +244,25 @@ export const AuthProvider = ({ children }) => {
         getAuthState();
     }, []);
 
+    useEffect(() => {
+        let worker = new Worker(new URL("../Workers/worker.js", import.meta.url), {
+            type: "module",
+        });
+        setWorker(worker);
+
+        worker.onmessage = (event) => {
+            if (event.data.type === "ALEO_WORKER_READY") {
+                setWorkerReady(true);
+            }
+        };
+
+        return () => {
+            worker.terminate();
+        };
+    }, [isAuthenticated]);
+
     return (
-        <AuthContext.Provider value={{ BACKEND_REST_API, ALEO_NODE_REST_API, isAuthenticated, account, accountPolls, saveTokens, getAccountData, tryLoginAccount, logout }}>
+        <AuthContext.Provider value={{ BACKEND_REST_API, ALEO_NODE_REST_API, isAuthenticated, account, accountPolls, worker, saveTokens, getAccountData, tryLoginAccount, logout, postMessagePromise }}>
             {children}
         </AuthContext.Provider>
     );
