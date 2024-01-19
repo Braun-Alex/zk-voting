@@ -17,6 +17,7 @@ class AccountPollList extends Component {
     render() {
         const { pollFormVisible } = this.state;
         const { accountPolls } = this.context;
+
         return (
             <div className="poll-from-account">
                 <button
@@ -34,11 +35,12 @@ class AccountPollList extends Component {
                     <ul className="list">
                         {accountPolls.map(poll =>
                             <li className="list-item">
+                                <p><strong>ID:</strong> {poll.id}</p>
                                 <p><strong>Title:</strong> {poll.title}</p>
                                 <p><strong>Question:</strong> {poll.question}</p>
-                                <p><strong>Proposal count:</strong> {poll.proposal_count}</p>
-                                <p><strong>Proposals:</strong> {poll.proposals}</p>
-                                <p><strong>Duration in Aleo Testnet3 blocks:</strong> {poll.duration}</p>
+                                <p><strong>Count of proposals:</strong> {poll.proposal_count} proposals</p>
+                                <p><strong>Proposals:</strong> ["{poll.proposals.join("\"; \"")}"]</p>
+                                <p><strong>Duration:</strong> {poll.duration} Aleo blocks</p>
                             </li>
                         )}
                     </ul>

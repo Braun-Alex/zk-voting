@@ -26,23 +26,27 @@ self.addEventListener("message", (ev) => {
 
         (async function () {
             try {
-                const executionResponse = await programManager.run(
+                await programManager.run(
                     program,
                     functionName,
                     inputs,
                     false
-                );
-
-                const outputs = executionResponse.getOutputs();
-
-                self.postMessage({
-                    type: "OFF_CHAIN_EXECUTION_COMPLETED",
-                    outputs,
+                ).then((executionResponse) => {
+                    const outputs = executionResponse.getOutputs();
+                    self.postMessage({
+                        type: "OFF_CHAIN_EXECUTION_COMPLETED",
+                        outputs
+                    });
+                }).catch((error) => {
+                    self.postMessage({
+                        type: "ERROR",
+                        errorMessage: error
+                    });
                 });
             } catch (error) {
                 self.postMessage({
                     type: "ERROR",
-                    errorMessage: error,
+                    errorMessage: error.message
                 });
             }
         })();
@@ -53,22 +57,28 @@ self.addEventListener("message", (ev) => {
 
         (async function () {
             try {
-                await programManager.execute(
+                programManager.execute(
                     programName,
                     functionName,
                     publicFee,
                     false,
                     inputs,
                     undefined
-                );
-
-                self.postMessage({
-                    type: "ON_CHAIN_EXECUTION_COMPLETED"
+                ).then((tx_id) => {
+                    self.postMessage({
+                        type: "ON_CHAIN_EXECUTION_COMPLETED",
+                        tx_id
+                    });
+                }).catch((error) => {
+                    self.postMessage({
+                        type: "ERROR",
+                        errorMessage: error
+                    });
                 });
             } catch (error) {
                 self.postMessage({
                     type: "ERROR",
-                    errorMessage: error,
+                    errorMessage: error.message
                 });
             }
         })();

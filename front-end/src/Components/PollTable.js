@@ -6,22 +6,9 @@ import PollTableItem from './PollTableItem';
 import '../css/PollMain.css';
 import { toast } from 'react-toastify';
 
-function bytesToCharArray(bytes) {
-    return bytes.map(byte => String.fromCharCode(byte)).join('').split('\u0000')[0];
-}
-
-function parsePoll(serializedPollData) {
-    let pollData = serializedPollData.replace(/(\w+):/g, '"$1":').replace(/u8/g, '').replace(/(aleo[a-z0-9]*),/g, '"$1",').replace(/u32/g, '');
-    pollData = JSON.parse(pollData);
-    pollData.title = bytesToCharArray(pollData.title);
-    pollData.question = bytesToCharArray(pollData.question);
-    pollData.proposals = pollData.proposals.map(proposal => bytesToCharArray(proposal)).filter(proposal => proposal !== '');
-    return pollData;
-}
-
 const PollTable = () => {
     const [polls, setPolls] = useState([]);
-    const { BACKEND_REST_API, ALEO_NODE_REST_API } = useContext(AuthContext);
+    const { BACKEND_REST_API, ALEO_NODE_REST_API, parsePoll } = useContext(AuthContext);
 
     useEffect(() => {
         const fetchPolls = async () => {
@@ -30,8 +17,13 @@ const PollTable = () => {
                 let allPolls = [];
                 const networkClient = new AleoNetworkClient(ALEO_NODE_REST_API);
                 for (const pollID of pollIDs.data) {
-                    const poll = await networkClient.getProgramMappingValue("zk_voting.aleo", "polls", pollID);
-                    allPolls.push(parsePoll(poll));
+                    let poll = await networkClient.getProgramMappingValue("zk_voting.aleo", "polls", pollID);
+                    const expiration = await networkClient.getProgramMappingValue("zk_voting.aleo", "poll_expiration", pollID);
+                    poll = parsePoll(poll);
+                    poll.id = pollID;
+                    const POSTFIX_LENGTH = 3;
+                    poll.expiration = expiration.substring(0, expiration.length - POSTFIX_LENGTH);
+                    allPolls.push(poll);
                 }
                 if (allPolls.length !== 0) {
                     setPolls(allPolls);
@@ -54,7 +46,7 @@ const PollTable = () => {
         return (
             <div className="poll-table">
                 {polls.map(poll =>
-                    <PollTableItem key={poll.proposal_count} poll={poll} />
+                    <PollTableItem key={poll.id} poll={poll} />
                 )}
             </div>
         );

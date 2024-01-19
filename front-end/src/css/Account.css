@@ -84,6 +84,7 @@
     background: #fff;
     padding: 5px 20px;
     width: 90%;
+    word-break: break-all;
   }
 }
 
@@ -146,6 +147,7 @@
     background: #fff;
     padding: 5px 20px;
     width: 80%;
+    word-break: break-all;
   }
 }
 

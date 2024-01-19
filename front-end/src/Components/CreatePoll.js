@@ -92,7 +92,7 @@ class CreatePoll extends Component {
 
     createPoll = async () => {
         const { title, question, proposals, proposal_count, duration } = this.state.pollData;
-        const { BACKEND_REST_API, account, tryRefreshAccessToken, getAccountData, worker, postMessagePromise } = this.context;
+        const { BACKEND_REST_API, account, worker, tryRefreshAccessToken, getAccountData, postMessagePromise } = this.context;
         try {
             const REGEX = /^[A-Za-z0-9]*$/;
             const QUESTION_REGEX = /^[A-Za-z0-9?]*$/;
@@ -358,7 +358,7 @@ class CreatePoll extends Component {
                                         <Dropdown
                                             options={durationOptions}
                                             value={defaultOption}
-                                            placeholder="Duration, Aleo Testnet3 blocks"
+                                            placeholder="Duration, Aleo blocks"
                                             className="poll-duration"
                                             onChange={(option) => this.handleInputChange('duration', option.value)} />
                                     </div>

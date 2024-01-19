@@ -75,7 +75,7 @@ class Account extends Component {
                         </button>
 
                         <button className={`${showPolls ? 'active-account-option': 'inactive-account-option'}`} onClick={this.togglePolls}>
-                            <img src={pollIcon} alt="Information about account polls" /> Polls
+                            <img src={pollIcon} alt="Information about account polls" /> My polls
                         </button>
                     </div>
                 </div>
@@ -121,7 +121,7 @@ class Account extends Component {
                         </>
                     )}
 
-                    {showPolls && <AccountPollList/>}
+                    {showPolls && <AccountPollList />}
 
                 </div>
             </div>

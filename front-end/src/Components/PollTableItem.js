@@ -1,21 +1,11 @@
 import React, { Component } from 'react';
-import {
-    Account,
-    AleoNetworkClient,
-    NetworkRecordProvider,
-    ProgramManager,
-    AleoKeyProvider
-} from '@aleohq/sdk';
+import { Account, AleoNetworkClient, RecordCiphertext } from '@aleohq/sdk';
 import pollImage from '../img/voting.jpg';
 import { AuthContext } from '../Contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
-const ZK_VOTING_PROGRAM = "program zk_voting.aleo;\n" +
-    "\n" +
-    "record Ticket:\n" +
-    "    owner as address.private;\n" +
-    "    poll_id as field.private;\n" +
+const ID_HASHING_PROGRAM = "program id_hashing.aleo;\n" +
     "\n" +
     "struct PollInfo:\n" +
     "    title as [u8; 32u32];\n" +
@@ -26,98 +16,23 @@ const ZK_VOTING_PROGRAM = "program zk_voting.aleo;\n" +
     "    duration as u32;\n" +
     "\n" +
     "\n" +
-    "mapping polls:\n" +
-    "\tkey as field.public;\n" +
-    "\tvalue as PollInfo.public;\n" +
-    "\n" +
-    "\n" +
-    "mapping poll_expiration:\n" +
-    "\tkey as field.public;\n" +
-    "\tvalue as u32.public;\n" +
-    "\n" +
-    "\n" +
-    "mapping tickets:\n" +
-    "\tkey as field.public;\n" +
-    "\tvalue as u64.public;\n" +
-    "\n" +
-    "\n" +
-    "mapping votes:\n" +
-    "\tkey as field.public;\n" +
-    "\tvalue as u64.public;\n" +
-    "\n" +
-    "\n" +
-    "mapping has_ticket:\n" +
-    "\tkey as field.public;\n" +
-    "\tvalue as boolean.public;\n" +
-    "\n" +
-    "function create_poll:\n" +
-    "    input r0 as PollInfo.public;\n" +
-    "    assert.eq self.caller r0.proposer;\n" +
-    "    async create_poll r0 into r1;\n" +
-    "    output r1 as zk_voting.aleo/create_poll.future;\n" +
-    "\n" +
-    "finalize create_poll:\n" +
+    "function to_poll_id:\n" +
     "    input r0 as PollInfo.public;\n" +
     "    hash.psd8 r0 into r1 as field;\n" +
-    "    gte r0.proposal_count 2u8 into r2;\n" +
-    "    lte r0.proposal_count 32u8 into r3;\n" +
-    "    and r2 r3 into r4;\n" +
-    "    assert.eq r4 true;\n" +
-    "    contains polls[r1] into r5;\n" +
-    "    not r5 into r6;\n" +
-    "    assert.eq r6 true;\n" +
-    "    add block.height r0.duration into r7;\n" +
-    "    set r7 into poll_expiration[r1];\n" +
-    "    set r0 into polls[r1];\n" +
-    "    set 0u64 into tickets[r1];\n" +
+    "    output r1 as field.private;\n" +
     "\n" +
     "\n" +
-    "function create_ticket:\n" +
-    "    input r0 as field.public;\n" +
-    "    input r1 as address.public;\n" +
-    "    cast r1 r0 into r2 as Ticket.record;\n" +
-    "    hash.psd8 r2 into r3 as field;\n" +
-    "    async create_ticket r0 r3 into r4;\n" +
-    "    output r2 as Ticket.record;\n" +
-    "    output r4 as zk_voting.aleo/create_ticket.future;\n" +
-    "\n" +
-    "finalize create_ticket:\n" +
-    "    input r0 as field.public;\n" +
-    "    input r1 as field.public;\n" +
-    "    get poll_expiration[r0] into r2;\n" +
-    "    gt r2 block.height into r3;\n" +
-    "    assert.eq r3 true;\n" +
-    "    get.or_use has_ticket[r1] false into r4;\n" +
-    "    not r4 into r5;\n" +
-    "    assert.eq r5 true;\n" +
-    "    set true into has_ticket[r1];\n" +
-    "    get.or_use tickets[r0] 0u64 into r6;\n" +
-    "    add r6 1u64 into r7;\n" +
-    "    set r7 into tickets[r0];\n" +
-    "\n" +
-    "\n" +
-    "function vote:\n" +
-    "    input r0 as Ticket.record;\n" +
-    "    input r1 as u8.public;\n" +
-    "    async vote r0.poll_id r1 into r2;\n" +
-    "    output r2 as zk_voting.aleo/vote.future;\n" +
-    "\n" +
-    "finalize vote:\n" +
+    "function to_voting_slot:\n" +
     "    input r0 as field.public;\n" +
     "    input r1 as u8.public;\n" +
-    "    get polls[r0] into r2;\n" +
-    "    add r1 1u8 into r3;\n" +
-    "    lte r3 r2.proposal_count into r4;\n" +
-    "    assert.eq r4 true;\n" +
-    "    get poll_expiration[r0] into r5;\n" +
-    "    gt r5 block.height into r6;\n" +
-    "    assert.eq r6 true;\n" +
-    "    cast r1 into r7 as field;\n" +
-    "    add r0 r7 into r8;\n" +
-    "    hash.psd8 r8 into r9 as field;\n" +
-    "    get.or_use votes[r9] 0u64 into r10;\n" +
-    "    add r10 1u64 into r11;\n" +
-    "    set r11 into votes[r9];";
+    "    cast r1 into r2 as field;\n" +
+    "    add r0 r2 into r3;\n" +
+    "    hash.psd8 r3 into r4 as field;\n" +
+    "    output r4 as field.private;";
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 class PollTableItem extends Component {
     static contextType = AuthContext;
@@ -130,10 +45,10 @@ class PollTableItem extends Component {
 
     handleVoting = async () => {
         const { poll } = this.props;
-        const { ALEO_NODE_REST_API, account, getAccountData } = this.context;
+        const { ALEO_NODE_REST_API, account, worker, getAccountData, postMessagePromise } = this.context;
         await Swal.fire({
             title: 'Vote privately for your proposal',
-            text: 'Enter the exact name of the proposal you want privately vote for',
+            text: 'Enter the exact name of the proposal you want to vote for privately',
             input: 'text',
             inputPlaceholder: 'Enter your proposal',
             inputAttributes: {
@@ -156,7 +71,7 @@ class PollTableItem extends Component {
         }).then(async (result) => {
             if (result.isDismissed) {
                 await Swal.fire({
-                    title: 'Are you sure you want to cancel the voting?',
+                    title: 'Are you sure you want to cancel voting?',
                     text: 'Cancelling the voting returns you to page with all polls',
                     icon: 'question',
                     showConfirmButton: true,
@@ -178,9 +93,6 @@ class PollTableItem extends Component {
                 });
             } else if (result.isConfirmed && result.value) {
                 try {
-                    const keyProvider = new AleoKeyProvider();
-                    keyProvider.useCache(true);
-
                     let privateKey;
                     if (account.privateKey === '<encrypted>') {
                         const response = await getAccountData(true);
@@ -203,13 +115,6 @@ class PollTableItem extends Component {
                     const PUBLIC_FEE = 300000;
 
                     const networkClient = new AleoNetworkClient(ALEO_NODE_REST_API);
-                    const recordProvider = new NetworkRecordProvider(aleoAccount, networkClient);
-
-                    const programManager = new ProgramManager(ALEO_NODE_REST_API, keyProvider, recordProvider);
-                    programManager.setAccount(aleoAccount);
-
-                    const ticketKeySearchParams = { "cacheKey": `zk_voting:${TICKET_FUNCTION_NAME}` };
-                    const votingKeySearchParams = { "cacheKey": `zk_voting:${VOTING_FUNCTION_NAME}` };
 
                     Swal.fire({
                         title: 'Voting...',
@@ -221,59 +126,43 @@ class PollTableItem extends Component {
                         }
                     });
 
-                    await programManager.run(
-                        ZK_VOTING_PROGRAM,
-                        TICKET_FUNCTION_NAME,
-                        [
+                    await postMessagePromise(worker, {
+                        type: "ALEO_EXECUTE_PROGRAM_ON_CHAIN",
+                        programName: ZK_VOTING_PROGRAM_NAME,
+                        functionName: TICKET_FUNCTION_NAME,
+                        publicFee: PUBLIC_FEE,
+                        inputs: [
                             poll.id,
                             aleoAddress
                         ],
-                        false).then(async (executionResponse) => {
-                        const outputs = executionResponse.getOutputs();
-                        const ticketRecord = outputs[0];
-                        await programManager.execute(
-                            ZK_VOTING_PROGRAM_NAME,
-                            TICKET_FUNCTION_NAME,
-                            PUBLIC_FEE,
-                            false,
-                            [
-                                poll.id,
-                                aleoAddress
+                        privateKey: privateKey
+                    }).then(async (workerResponse) => {
+                        const CREATING_EXECUTION_TRANSACTION_TIME = 30000;
+                        await sleep(CREATING_EXECUTION_TRANSACTION_TIME);
+                        const transaction = await networkClient.getTransaction(workerResponse.tx_id);
+                        const encryptedRecord = RecordCiphertext.fromString(transaction.execution.transitions[0].outputs[0].value);
+                        const record = encryptedRecord.decrypt(aleoAccount.viewKey()).toString();
+                        await postMessagePromise(worker, {
+                            type: "ALEO_EXECUTE_PROGRAM_ON_CHAIN",
+                            programName: ZK_VOTING_PROGRAM_NAME,
+                            functionName: VOTING_FUNCTION_NAME,
+                            publicFee: PUBLIC_FEE,
+                            inputs: [
+                                record,
+                                proposalIndex
                             ],
-                            undefined,
-                            ticketKeySearchParams
-                        ).then(async () => {
-                            await programManager.execute(
-                                ZK_VOTING_PROGRAM_NAME,
-                                VOTING_FUNCTION_NAME,
-                                PUBLIC_FEE,
-                                false,
-                                [
-                                    ticketRecord,
-                                    proposalIndex
-                                ],
-                                undefined,
-                                votingKeySearchParams
-                            ).then(async () => {
-                                await Swal.fire({
-                                    title: 'You have successfully voted!',
-                                    icon: 'success',
-                                    showConfirmButton: false,
-                                    timer: 3000,
-                                    timerProgressBar: true
-                                });
-                            }).catch(async (error) => {
-                                await Swal.fire({
-                                    title: 'Error!',
-                                    text: 'Something went wrong while voting on-chain. Error: ' + error,
-                                    icon: 'error',
-                                    confirmButtonText: 'Return'
-                                });
+                            privateKey: privateKey
+                        }).then(async () => {
+                            await Swal.fire({
+                                title: 'Success!',
+                                text: 'You have successfully voted!',
+                                icon: 'success',
+                                confirmButtonText: 'Close'
                             });
                         }).catch(async (error) => {
                             await Swal.fire({
                                 title: 'Error!',
-                                text: 'Something went wrong while finalizing ticket on-chain. Error: ' + error,
+                                text: 'Something went wrong while voting on-chain. Error: ' + error,
                                 icon: 'error',
                                 confirmButtonText: 'Return'
                             });
@@ -281,7 +170,7 @@ class PollTableItem extends Component {
                     }).catch(async (error) => {
                         await Swal.fire({
                             title: 'Error!',
-                            text: 'Something went wrong while creating ticket record. Error: ' + error,
+                            text: 'Something went wrong while finalizing ticket on-chain. Error: ' + error,
                             icon: 'error',
                             confirmButtonText: 'Return'
                         });
@@ -298,12 +187,121 @@ class PollTableItem extends Component {
         });
     }
 
+    checkVotes = async () => {
+        const { poll } = this.props;
+        const { ALEO_NODE_REST_API, worker, postMessagePromise } = this.context;
+        await Swal.fire({
+            title: 'Check vote count for your proposal',
+            text: 'Enter the exact name of the proposal you want to check vote count for',
+            input: 'text',
+            inputPlaceholder: 'Enter your proposal',
+            inputAttributes: {
+                autocapitalize: 'off',
+                autocorrect: 'off',
+                showPasswordIcon: true
+            },
+            showCancelButton: true,
+            confirmButtonText: 'Check',
+            showLoaderOnConfirm: true,
+            cancelButtonText: 'Cancel',
+            preConfirm: async (proposal) => {
+                if (!poll.proposals.includes(proposal)) {
+                    Swal.showValidationMessage("Poll does not contain such proposal!");
+                    return false;
+                }
+                return poll.proposals.indexOf(proposal).toString() + "u8";
+            },
+            allowOutsideClick: false,
+        }).then(async (result) => {
+            if (result.isDismissed) {
+                await Swal.fire({
+                    title: 'Are you sure you want to cancel checking votes?',
+                    text: 'Cancelling checking votes returns you to page with all polls',
+                    icon: 'question',
+                    showConfirmButton: true,
+                    confirmButtonText: 'No, I want to check votes',
+                    showCancelButton: true,
+                    cancelButtonText: 'Yes, I want to cancel'
+                }).then(async (finalResult) => {
+                    if (finalResult.isConfirmed) {
+                        return await this.handleVoting();
+                    } else if (finalResult.isDismissed) {
+                        await Swal.fire({
+                            title: 'Checking votes has been cancelled!',
+                            icon: 'info',
+                            showConfirmButton: false,
+                            timer: 3000,
+                            timerProgressBar: true
+                        });
+                    }
+                });
+            } else if (result.isConfirmed && result.value) {
+                try {
+                    const proposalIndex = result.value;
+
+                    const randomAleoAccount = new Account();
+                    const SLOT_FUNCTION_NAME = "to_voting_slot";
+
+                    Swal.fire({
+                        title: 'Checking votes...',
+                        html: 'Please wait while checking vote count for the proposal on the Aleo network...',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        willOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    await postMessagePromise(worker, {
+                        type: "ALEO_EXECUTE_PROGRAM_OFF_CHAIN",
+                        program: ID_HASHING_PROGRAM,
+                        functionName: SLOT_FUNCTION_NAME,
+                        inputs: [
+                            poll.id,
+                            proposalIndex
+                        ],
+                        privateKey: randomAleoAccount.privateKey().to_string()
+                    }).then(async (workerResponse) => {
+                        const votingSlot = (workerResponse.outputs)[0];
+                        const networkClient = new AleoNetworkClient(ALEO_NODE_REST_API);
+                        let voteCount = await networkClient.getProgramMappingValue("zk_voting.aleo", "votes", votingSlot);
+                        if (voteCount) {
+                            const POSTFIX_LENGTH = 3;
+                            voteCount = voteCount.substring(0, voteCount.length - POSTFIX_LENGTH);
+                        } else {
+                            voteCount = "0";
+                        }
+                        await Swal.fire({
+                            title: voteCount + ' people voted for this proposal',
+                            icon: 'info',
+                            confirmButtonText: 'Got it'
+                        });
+                    }).catch(async (error) => {
+                        await Swal.fire({
+                            title: 'Error!',
+                            text: 'Something went wrong while querying vote mapping. Error: ' + error,
+                            icon: 'error',
+                            confirmButtonText: 'Return'
+                        });
+                    });
+                } catch (error) {
+                    await Swal.fire({
+                        title: 'Error!',
+                        text: 'Something went wrong while checking votes. Error: ' + error,
+                        icon: 'error',
+                        confirmButtonText: 'Return'
+                    });
+                }
+            }
+        });
+    }
+
     render() {
         const { poll } = this.props;
         const { account } = this.context;
 
         return (
-            <div className='poll-item-container'>
+            <div>
                 <div className='poll-item'>
                     <div><strong>{poll.title}</strong></div>
                     <div>
@@ -313,7 +311,9 @@ class PollTableItem extends Component {
                         <p><strong>Question:</strong> "{poll.question}"</p>
                         <p><strong>Count of proposals:</strong> {poll.proposal_count} proposals</p>
                         <p><strong>Proposals:</strong> ["{poll.proposals.join("\"; \"")}"]</p>
+                        <p><strong>Proposer: </strong> {poll.proposer}</p>
                         <p><strong>Duration:</strong> {poll.duration} Aleo blocks</p>
+                        <p><strong>Expiration at:</strong> {poll.expiration} Aleo block</p>
                     </div>
                     {account && (
                         <button className="view-poll" onClick={this.handleVoting}>Vote</button>
@@ -323,6 +323,7 @@ class PollTableItem extends Component {
                             Log in to vote
                         </Link>
                     )}
+                    <button className="view-poll" onClick={this.checkVotes}>Check votes</button>
                 </div>
             </div>
         );

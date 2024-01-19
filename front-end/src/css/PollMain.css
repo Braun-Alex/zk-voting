@@ -32,6 +32,7 @@
     background-color: #F2F1ED;
     color: #3f382e;
     font-size: 17px;
+    word-break: break-all;
 }
 
 .poll-photo {
@@ -43,7 +44,7 @@
     align-items: center;
     justify-content: center;
     background-color: #F2F1ED;
-    margin: 8px 0px;
+    margin: 8px 0;
 }
 
 

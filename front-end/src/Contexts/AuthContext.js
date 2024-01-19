@@ -49,6 +49,19 @@ export const AuthProvider = ({ children }) => {
         setAuthHeader(accessToken);
     }
 
+    const bytesToCharArray = (bytes) => {
+        return bytes.map(byte => String.fromCharCode(byte)).join('').split('\u0000')[0];
+    }
+
+    const parsePoll = (serializedPollData) => {
+        let pollData = serializedPollData.replace(/(\w+):/g, '"$1":').replace(/u8/g, '').replace(/(aleo[a-z0-9]*),/g, '"$1",').replace(/u32/g, '');
+        pollData = JSON.parse(pollData);
+        pollData.title = bytesToCharArray(pollData.title);
+        pollData.question = bytesToCharArray(pollData.question);
+        pollData.proposals = pollData.proposals.map(proposal => bytesToCharArray(proposal)).filter(proposal => proposal !== '');
+        return pollData;
+    }
+
     const getData = async (apiUrl) => {
         try {
             const response = await axios.get(apiUrl);
@@ -173,19 +186,13 @@ export const AuthProvider = ({ children }) => {
 
     const getAccountPolls = async (pollIDs) => {
         const polls = [];
-        const networkClient = new AleoNetworkClient(ALEO_NODE_REST_API);
         if (pollIDs) {
+            const networkClient = new AleoNetworkClient(ALEO_NODE_REST_API);
             for (const pollID of pollIDs) {
-                const poll = networkClient.getProgramMappingValue("zk_voting.aleo", "polls", pollID);
-                polls.push({
-                    id: pollID,
-                    title: poll.title,
-                    question: poll.question,
-                    proposal_count: poll.proposal_count,
-                    proposals: poll.proposals,
-                    proposer: poll.proposer,
-                    duration: poll.duration
-                });
+                let poll = await networkClient.getProgramMappingValue("zk_voting.aleo", "polls", pollID);
+                poll = parsePoll(poll);
+                poll.id = pollID;
+                polls.push(poll);
             }
             if (polls.length !== 0) {
                 return polls;
@@ -221,10 +228,11 @@ export const AuthProvider = ({ children }) => {
     function postMessagePromise(worker, message) {
         return new Promise((resolve, reject) => {
             worker.onmessage = (event) => {
-                resolve(event.data);
-            };
-            worker.onerror = (error) => {
-                reject(error);
+                if (event.data.type === "ERROR") {
+                    reject(new Error(event.data.errorMessage));
+                } else {
+                    resolve(event.data);
+                }
             };
             worker.postMessage(message);
         });
@@ -259,10 +267,10 @@ export const AuthProvider = ({ children }) => {
         return () => {
             worker.terminate();
         };
-    }, [isAuthenticated]);
+    }, []);
 
     return (
-        <AuthContext.Provider value={{ BACKEND_REST_API, ALEO_NODE_REST_API, isAuthenticated, account, accountPolls, worker, saveTokens, tryRefreshAccessToken, getAccountData, tryLoginAccount, logout, postMessagePromise }}>
+        <AuthContext.Provider value={{ BACKEND_REST_API, ALEO_NODE_REST_API, isAuthenticated, account, accountPolls, worker, saveTokens, parsePoll, tryRefreshAccessToken, getAccountData, tryLoginAccount, logout, postMessagePromise }}>
             {children}
         </AuthContext.Provider>
     );
