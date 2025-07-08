@@ -1,6 +1,5 @@
 import logging
 
-from fastapi.middleware.cors import CORSMiddleware
 from database import Base, engine, SessionLocal
 from service.account_service import AccountService
 from controllers.account_controller import AccountController
@@ -12,14 +11,6 @@ from dependencies.dependencies import get_current_account, refresh_access_token
 from utilities.utilities import TokenSchema
 
 app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 db = SessionLocal()
 

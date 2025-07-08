@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../Contexts/AuthContext';
 import { withoutAuth } from '../Wrappers/WithoutAuth';
-import { Account, PrivateKey, PrivateKeyCiphertext } from '@aleohq/sdk';
+import { Account, PrivateKey, PrivateKeyCiphertext } from '@provablehq/sdk';
 import { toast } from 'react-toastify';
 import '../css/Auth.css';
 

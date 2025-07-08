@@ -33,7 +33,7 @@ validator_indices=($(seq 0 $((total_validators - 1))))
 for validator_index in "${validator_indices[@]}"; do
   log_file="$log_dir/validator-$validator_index.log"
   tmux new-window -t "devnet:$validator_index" -n "window$validator_index"
-  tmux send-keys -t "devnet:window$validator_index" "snarkos start --nodisplay --dev $validator_index --dev-num-validators $total_validators --validator --logfile $log_file" C-m
+  tmux send-keys -t "devnet:window$validator_index" "snarkos start --network 1 --nodisplay --dev $validator_index --dev-num-validators $total_validators --validator --logfile $log_file" C-m
 done
 
 tmux attach-session -t "devnet"

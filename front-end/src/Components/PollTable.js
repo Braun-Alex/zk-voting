@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { AleoNetworkClient } from '@aleohq/sdk';
+import { AleoNetworkClient } from '@provablehq/sdk';
 import axios from 'axios';
 import { AuthContext } from '../Contexts/AuthContext';
 import PollTableItem from './PollTableItem';

@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Account, AleoNetworkClient, RecordCiphertext } from '@aleohq/sdk';
+import { Account, AleoNetworkClient, RecordCiphertext } from '@provablehq/sdk';
 import pollImage from '../img/voting.jpg';
 import { AuthContext } from '../Contexts/AuthContext';
 import { Link } from 'react-router-dom';

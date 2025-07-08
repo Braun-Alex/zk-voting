@@ -1,12 +1,12 @@
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
-import { PrivateKeyCiphertext, AleoNetworkClient } from '@aleohq/sdk';
+import { PrivateKeyCiphertext, AleoNetworkClient } from '@provablehq/sdk';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
 
 const initialState = {
-    BACKEND_REST_API: 'http://localhost:8080',
-    ALEO_NODE_REST_API: 'http://localhost:3033',
+    BACKEND_REST_API: process.env.REACT_APP_BACKEND_REST_API,
+    ALEO_NODE_REST_API: process.env.REACT_APP_ALEO_NODE_REST_API,
     isAuthenticated: false,
     account: null,
     accountPolls: null,
@@ -35,8 +35,8 @@ export const AuthProvider = ({ children }) => {
     const [worker, setWorker] = useState(null);
     const [workerReady, setWorkerReady] = useState(false);
 
-    const BACKEND_REST_API = 'http://localhost:8080';
-    const ALEO_NODE_REST_API = 'http://localhost:3033';
+    const BACKEND_REST_API = process.env.REACT_APP_BACKEND_REST_API;
+    const ALEO_NODE_REST_API = process.env.REACT_APP_ALEO_NODE_REST_API;
 
     const setAuthHeader = (accessToken) => {
         axios.defaults.headers.common['Authorization'] = accessToken ? `Bearer ${accessToken}` : '';

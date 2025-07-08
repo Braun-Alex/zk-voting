@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Account } from '@aleohq/sdk';
+import { Account } from '@provablehq/sdk';
 import '../css/Modal.css'
 import Modal from 'react-modal';
 import Dropdown from 'react-dropdown';
@@ -267,7 +267,7 @@ class CreatePoll extends Component {
                 }).catch(async (error) => {
                     await Swal.fire({
                         title: 'Error!',
-                        text: 'Something went wrong while id_hashing.aleo to_poll_id function execution and adding the poll on backend: ' + error,
+                        text: 'Something went wrong while id_hashing.aleo to_poll_id function execution and adding the poll on backend: ' + error.message,
                         icon: 'error',
                         confirmButtonText: 'Return'
                     });

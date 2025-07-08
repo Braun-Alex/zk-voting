@@ -1,9 +1,18 @@
 FROM rust:latest as builder
 
-RUN apt-get update && apt-get install -y git && apt-get clean
+RUN apt-get update && apt-get install -y \
+    git \
+    clang \
+    libclang-dev \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    tmux \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /aleo-network
-RUN git clone https://github.com/AleoHQ/snarkOS.git --depth 1
+RUN git clone https://github.com/ProvableHQ/snarkOS.git --depth 1
 WORKDIR /aleo-network/snarkOS
 
 RUN ./build_ubuntu.sh && cargo install --path .
