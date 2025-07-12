@@ -196,6 +196,8 @@ class CreatePoll extends Component {
                 "duration: " + DURATION +
                 "}";
 
+            console.log(POLL);
+
             Swal.fire({
                 title: 'Creating the poll...',
                 html: 'Please wait while your poll is being created on the Aleo network...',
@@ -259,7 +261,7 @@ class CreatePoll extends Component {
                     }).catch(async (error) => {
                         await Swal.fire({
                             title: 'Error!',
-                            text: 'Something went wrong while getting poll ID output and adding the poll on backend: ' + error,
+                            text: 'Something went wrong while getting poll ID output and adding the poll on backend: ' + error.message,
                             icon: 'error',
                             confirmButtonText: 'Return'
                         });

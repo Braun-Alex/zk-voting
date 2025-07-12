@@ -11,7 +11,6 @@ self.postMessage({
 });
 
 self.addEventListener("message", (ev) => {
-    const networkClient = new aleo.AleoNetworkClient(ALEO_NODE_REST_API);
     const aleoAccount = new aleo.Account( { privateKey: ev.data.privateKey } );
     const recordProvider = new aleo.NetworkRecordProvider(aleoAccount, ALEO_NODE_REST_API);
     const programManager = new aleo.ProgramManager(ALEO_NODE_REST_API, keyProvider, recordProvider);
@@ -53,22 +52,15 @@ self.addEventListener("message", (ev) => {
 
         (async function () {
             try {
-                networkClient.getLatestHeight().then((height) => {
-                    console.log(height);
-                }).catch((error) => {
-                    console.log(error.message);
-                });
                 programManager.buildExecutionTransaction({
                     programName: programName,
                     functionName: functionName,
                     fee: publicFee,
                     privateFee: false,
                     inputs: inputs,
-                    privateKey: ev.data.privateKey
+                    keySearchParams: {cacheKey: `${programName}:${functionName}`}
                 }).then((transaction) => {
-                    console.log(transaction);
                     programManager.networkClient.submitTransaction(transaction).then((tx_id) => {
-                        console.log(tx_id);
                         self.postMessage({
                             type: "ON_CHAIN_EXECUTION_COMPLETED",
                             tx_id
@@ -76,13 +68,13 @@ self.addEventListener("message", (ev) => {
                     }).catch((error) => {
                         self.postMessage({
                             type: "ERROR",
-                            errorMessage: error
+                            errorMessage: error.message
                         });
                     });
                 }).catch((error) => {
                     self.postMessage({
                         type: "ERROR",
-                        errorMessage: error
+                        errorMessage: error.message
                     });
                 });
             } catch (error) {
